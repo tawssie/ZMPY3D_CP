@@ -27,9 +27,9 @@ import argparse
 import os
 import sys
 
-import ZMPY_CP as z
+import ZMPY3D_CP as z
 
-def ZMPY_CP_CLI_SuperA2B(PDBFileNameA, PDBFileNameB):
+def ZMPY3D_CP_CLI_SuperA2B(PDBFileNameA, PDBFileNameB):
     def ZMCal(PDBFileName,GridWidth,BinomialCache, CLMCache, CLMCache3D, GCache_complex, GCache_complex_index, GCache_pqr_linear, MaxOrder, Param, ResidueBox, RotationIndex):
 
         [XYZ,AA_NameList]=z.get_pdb_xyz_ca(PDBFileName)
@@ -108,7 +108,7 @@ def ZMPY_CP_CLI_SuperA2B(PDBFileNameA, PDBFileNameB):
     # with open('./cache_data/LogG_CLMCache_MaxOrder{:02d}.pkl'.format(MaxOrder), 'rb') as file: # Can be used in ipynb, but not at the entry point. 
         CachePKL = pickle.load(file)  
 
-    # Extract all cached variables from pickle. These will be converted into a tensor/cupy objects for ZMPY_CP and ZMPY_TF.
+    # Extract all cached variables from pickle. These will be converted into a tensor/cupy objects for ZMPY3D_CP and ZMPY3D_TF.
     BinomialCache= cp.array(BinomialCachePKL['BinomialCache'],dtype=cp.float64)
     
     # GCache, CLMCache, and all RotationIndex
@@ -155,7 +155,7 @@ def ZMPY_CP_CLI_SuperA2B(PDBFileNameA, PDBFileNameB):
 
 def main():
     if len(sys.argv) != 3:
-        print('Usage: ZMPY_CP_CLI_SuperA2B PDB_A PDB_B')
+        print('Usage: ZMPY3D_CP_CLI_SuperA2B PDB_A PDB_B')
         print('    This function generates a transformation matrix to superimpose structure A onto B, i.e., the matrix is for A’s coordinates.')
         print('Error: You must provide exactly two input files.')
         sys.exit(1)
@@ -176,7 +176,7 @@ def main():
             parser.error("File does not exist")
 
 
-    TargetRotM=ZMPY_CP_CLI_SuperA2B(args.input_file1,args.input_file2)
+    TargetRotM=ZMPY3D_CP_CLI_SuperA2B(args.input_file1,args.input_file2)
 
     print('the matrix is for A’s coordinates.')
     print(TargetRotM)

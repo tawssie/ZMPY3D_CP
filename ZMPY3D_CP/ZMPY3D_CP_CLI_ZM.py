@@ -27,9 +27,9 @@ import argparse
 import os
 import sys
 
-import ZMPY_CP as z
+import ZMPY3D_CP as z
 
-def ZMPY_CP_CLI_ZM(PDBFileName,GridWidth=1.0, MaxOrder=6, MaxTargetOrder2NormRotate=5, Mode=0):
+def ZMPY3D_CP_CLI_ZM(PDBFileName,GridWidth=1.0, MaxOrder=6, MaxTargetOrder2NormRotate=5, Mode=0):
 
     Param=z.get_global_parameter()
 
@@ -44,7 +44,7 @@ def ZMPY_CP_CLI_ZM(PDBFileName,GridWidth=1.0, MaxOrder=6, MaxTargetOrder2NormRot
     # with open('./cache_data/LogG_CLMCache_MaxOrder{:02d}.pkl'.format(MaxOrder), 'rb') as file: # Can be used in ipynb, but not at the entry point. 
         CachePKL = pickle.load(file)
     
-    # Extract all cached variables from pickle. These will be converted into a tensor/cupy objects for ZMPY_CP and ZMPY_TF.
+    # Extract all cached variables from pickle. These will be converted into a tensor/cupy objects for ZMPY3D_CP and ZMPY3D_TF.
     BinomialCache= cp.array(BinomialCachePKL['BinomialCache'],dtype=cp.float64)
     
     # GCache, CLMCache, and all RotationIndex
@@ -139,7 +139,7 @@ def ZMPY_CP_CLI_ZM(PDBFileName,GridWidth=1.0, MaxOrder=6, MaxTargetOrder2NormRot
 
 def main():
     if len(sys.argv) != 6:
-        print('Usage: ZMPY_CP_CLI_ZM PDBFile GridWidth MaximumOrder NormOrder Mode')
+        print('Usage: ZMPY3D_CP_CLI_ZM PDBFile GridWidth MaximumOrder NormOrder Mode')
         print('    This function computes the Zernike moment based on the specified maximum order, normalization order, and voxel gridding width.')
         print("Error: You must provide exactly five input arguments.")
         sys.exit(1)
@@ -163,12 +163,12 @@ def main():
     if args.MaxN > args.MaxOrder or args.MaxN < 2:
         parser.error("Maximum normalisation order must be larger than 2 and less than or equal to the maximum order of calculating ZM.")
 
-    # Result=ZMPY_CP_CLI_ZM(input_file,args.GW,args.MaxOrder,args.MaxN,args.Mode)
+    # Result=ZMPY3D_CP_CLI_ZM(input_file,args.GW,args.MaxOrder,args.MaxN,args.Mode)
     # np.set_printoptions(threshold=Result.numpy().size)
     # print(Result.numpy())
     # print('\n')
     
-    print(ZMPY_CP_CLI_ZM(input_file,args.GW,args.MaxOrder,args.MaxN,args.Mode))
+    print(ZMPY3D_CP_CLI_ZM(input_file,args.GW,args.MaxOrder,args.MaxN,args.Mode))
 
 if __name__ == "__main__":
     main()

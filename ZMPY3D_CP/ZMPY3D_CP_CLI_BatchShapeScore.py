@@ -27,20 +27,20 @@ import argparse
 import os
 import sys
 
-import ZMPY_CP as z
+import ZMPY3D_CP as z
 
-def ZMPY_CP_CLI_ShapeScore(PDBFileNameA, PDBFileNameB,GridWidth):
+def ZMPY3D_CP_CLI_BatchShapeScore(PDBFileNameA, PDBFileNameB,GridWidth):
+
     def ZMCal(PDBFileName,GridWidth,BinomialCache, CLMCache, CLMCache3D, GCache_complex, GCache_complex_index, GCache_pqr_linear, MaxOrder, Param, ResidueBox, RotationIndex):
-
+        
         [XYZ,AA_NameList]=z.get_pdb_xyz_ca(PDBFileName)
-
+        
         [Voxel3D,Corner]=z.fill_voxel_by_weight_density(XYZ,AA_NameList,Param['residue_weight_map'],GridWidth,ResidueBox[GridWidth])
         Voxel3D=cp.array(Voxel3D,dtype=cp.float64)
         Corner=cp.array(Corner,dtype=cp.float64)
         
         Dimension_BBox_scaled=cp.shape(Voxel3D)
         Dimension_BBox_scaled=cp.array(Dimension_BBox_scaled,dtype=cp.int32)
-        GridWidth=cp.array(GridWidth,dtype=cp.float64)
         
         MaxOrder=cp.array(MaxOrder,dtype=cp.int64)
 
@@ -95,23 +95,23 @@ def ZMPY_CP_CLI_ShapeScore(PDBFileNameA, PDBFileNameB,GridWidth):
         GeoDescriptor = cp.vstack((AverageVoxelDist2Center, TotalResidueWeight, Prctile_list, STD_XYZ_dist2center, S, K))
         
         return MomentInvariant, GeoDescriptor
+
     
     Param=z.get_global_parameter();
-
-    MaxOrder=20
     
+    MaxOrder=20
+
     BinomialCacheFilePath = os.path.join(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache_data'), 'BinomialCache.pkl')
     with open(BinomialCacheFilePath, 'rb') as file: # Used at the entry point, it requires __file__ to identify the package location
     # with open('./cache_data/BinomialCache.pkl', 'rb') as file: # Can be used in ipynb, but not at the entry point. 
         BinomialCachePKL = pickle.load(file)
-
 
     LogCacheFilePath=os.path.join(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache_data'), 'LogG_CLMCache_MaxOrder{:02d}.pkl'.format(MaxOrder))
     with open(LogCacheFilePath, 'rb') as file: # Used at the entry point, it requires __file__ to identify the package location
     # with open('./cache_data/LogG_CLMCache_MaxOrder{:02d}.pkl'.format(MaxOrder), 'rb') as file: # Can be used in ipynb, but not at the entry point. 
         CachePKL = pickle.load(file)  
 
-    # Extract all cached variables from pickle. These will be converted into a tensor/cupy objects for ZMPY_CP and ZMPY_TF.
+    # Extract all cached variables from pickle. These will be converted into a tensor/cupy objects for ZMPY3D_CP and ZMPY3D_TF.
     BinomialCache= cp.array(BinomialCachePKL['BinomialCache'],dtype=cp.float64)
     
     # GCache, CLMCache, and all RotationIndex
@@ -122,7 +122,7 @@ def ZMPY_CP_CLI_ShapeScore(PDBFileNameA, PDBFileNameB,GridWidth):
     CLMCache= cp.array(CachePKL['CLMCache'], dtype=cp.float64)
 
     RotationIndex=CachePKL['RotationIndex']
-    
+
     # RotationIndex is a structure, must be [0,0] to accurately obtain the s_id ... etc, within RotationIndex.
     s_id=cp.array(np.squeeze(RotationIndex['s_id'][0,0])-1, dtype=cp.int32)
     n   =cp.array(np.squeeze(RotationIndex['n'] [0,0]), dtype=cp.int32)
@@ -130,76 +130,97 @@ def ZMPY_CP_CLI_ShapeScore(PDBFileNameA, PDBFileNameB,GridWidth):
     m   =cp.array(np.squeeze(RotationIndex['m'] [0,0]), dtype=cp.int32)
     mu  =cp.array(np.squeeze(RotationIndex['mu'][0,0]), dtype=cp.int32)
     k   =cp.array(np.squeeze(RotationIndex['k'] [0,0]), dtype=cp.int32)
-    IsNLM_Value=cp.array(np.squeeze(RotationIndex['IsNLM_Value'][0,0])-1, dtype=cp.int32)
-
-    MaxN=MaxOrder+1
+    IsNLM_Value=cp.array(np.squeeze(RotationIndex['IsNLM_Value'][0,0])-1, dtype=cp.int32)  
     
     ResidueBox=z.get_residue_gaussian_density_cache(Param)
-
-    MomentInvariantRawA, GeoDescriptorA =ZMCal(PDBFileNameA,GridWidth,BinomialCache, CLMCache, CLMCache3D, GCache_complex, GCache_complex_index, GCache_pqr_linear, MaxOrder, Param, ResidueBox, RotationIndex)
-    MomentInvariantRawB, GeoDescriptorB =ZMCal(PDBFileNameB,GridWidth,BinomialCache, CLMCache, CLMCache3D, GCache_complex, GCache_complex_index, GCache_pqr_linear, MaxOrder, Param, ResidueBox, RotationIndex)
 
     P=z.get_descriptor_property()
 
     ZMIndex  = cp.vstack([P['ZMIndex0'], P['ZMIndex1'], P['ZMIndex2'], P['ZMIndex3'], P['ZMIndex4']])
     ZMWeight = cp.vstack([P['ZMWeight0'], P['ZMWeight1'], P['ZMWeight2'], P['ZMWeight3'], P['ZMWeight4']])
-    
-    # Calculating ZMScore
-    ZMScore = cp.sum(cp.abs(MomentInvariantRawA[ZMIndex] - MomentInvariantRawB[ZMIndex]) * ZMWeight)
 
-    # Calculating GeoScore    
-    GeoScore = cp.sum( cp.asarray(P['GeoWeight']) * (2 * cp.abs(GeoDescriptorA - GeoDescriptorB) / (1 + cp.abs(GeoDescriptorA) + cp.abs(GeoDescriptorB))))
+    GeoScoreScaled = [] 
+    ZMScoreScaled  = [] 
+
+    for index in range(len(PDBFileNameA)):
+        MomentInvariantRawA, GeoDescriptorA =ZMCal(PDBFileNameA[index],GridWidth,BinomialCache, CLMCache, CLMCache3D, GCache_complex, GCache_complex_index, GCache_pqr_linear, MaxOrder, Param, ResidueBox, RotationIndex)
+        MomentInvariantRawB, GeoDescriptorB =ZMCal(PDBFileNameB[index],GridWidth,BinomialCache, CLMCache, CLMCache3D, GCache_complex, GCache_complex_index, GCache_pqr_linear, MaxOrder, Param, ResidueBox, RotationIndex)
+        
+        # Calculating ZMScore
+        ZMScore = cp.sum(cp.abs(MomentInvariantRawA[ZMIndex] - MomentInvariantRawB[ZMIndex]) * ZMWeight)
     
-    # Calculating paper loss
-    Paper_Loss = ZMScore + GeoScore
+        # Calculating GeoScore    
+        GeoScore = cp.sum( cp.asarray(P['GeoWeight']) * (2 * cp.abs(GeoDescriptorA - GeoDescriptorB) / (1 + cp.abs(GeoDescriptorA) + cp.abs(GeoDescriptorB))))
     
-    # Scaled scores, fitted to shape service
-    GeoScoreScaled = (6.6 - GeoScore) / 6.6 * 100.0
-    ZMScoreScaled = (9.0 - ZMScore) / 9.0 * 100.0
+        # # Calculating paper loss, not report
+        # Paper_Loss = ZMScore + GeoScore
+        
+        # Scaled scores, fitted to shape service
+        GeoScoreScaled.append((6.6 - GeoScore) / 6.6 * 100.0)
+        ZMScoreScaled.append((9.0 - ZMScore) / 9.0 * 100.0)
 
     return GeoScoreScaled, ZMScoreScaled
 
 
 def main():
-    if len(sys.argv) != 4:
-        print('Usage: ZMPY_CP_CLI_ShapeScore PDB_A PDB_B GridWidth')
-        print('    This function takes two PDB structures and a grid width to generate shape analysis scores.')
-        print('Error: You must provide exactly two input files and an input grid width.')
+    if len(sys.argv) != 3:
+        print('Usage: ZMPY3D_CP_CLI_BatchShapeScore PDBFileList.txt GridWidth')
+        print('       This function takes a list of paired PDB structure file paths and a grid width to generate shape analysis scores.')
+        print("Error: You must provide exactly one input file and a grid width.")
         sys.exit(1)
 
-    parser = argparse.ArgumentParser(description='Process two .pdb or .txt files.')
-    parser.add_argument('input_file1', type=str, help='The first input file to process (must end with .pdb or .txt) with old PDB text format')
-    parser.add_argument('input_file2', type=str, help='The second input file to process (must end with .pdb or .txt) with old PDB text format')
-    parser.add_argument('grid_width', type=str, help='The third input file to process (must 0.25, 0.50 or 1.0)')
+    parser = argparse.ArgumentParser(description='Process input file that contains paths to .pdb or .txt files and a grid width.')
+    parser.add_argument('input_file', type=str, help='The input file that contains paths to .pdb or .txt files.')
+    parser.add_argument('grid_width', type=str, help='The grid width (must be 0.25, 0.50 or 1.0)')
 
     args = parser.parse_args()
 
-    # Perform validation checks directly after parsing arguments
-    input_files = [args.input_file1, args.input_file2]
-    for input_file in input_files:
-        if not (input_file.endswith('.pdb') or input_file.endswith('.txt')):
-            parser.error("File must end with .pdb or .txt")
-        
-        if not os.path.isfile(input_file):
-            parser.error("File does not exist")
+
+    input_file = args.input_file
+    if not input_file.endswith('.txt'):
+        parser.error("PDB file list must end with .txt")
+    
+    if not os.path.isfile(input_file):
+        parser.error("File does not exist")
 
     try:
         GridWidth = float(args.grid_width)
     except ValueError:
-        print("GridWidth cannot be converted to a float.")   
-
+        parser.error("GridWidth cannot be converted to a float.")
+    
     if GridWidth not in [0.25, 0.50, 1.0]:
         parser.error("grid width must be either 0.25, 0.50, or 1.0")
 
 
-    GeoScoreScaled, ZMScoreScaled=ZMPY_CP_CLI_ShapeScore(args.input_file1,args.input_file2,GridWidth)
+    with open(input_file, 'r') as file:
+        lines = file.readlines()
+
+    file_list_1 = []
+    file_list_2 = []
+    for line in lines:
+        files = line.strip().split()
+        if len(files) != 2:
+            print(f"Error: Each line must contain exactly two file paths, but got {len(files)}.")
+            sys.exit(1)
+        file1, file2 = files
+
+        for file in [file1, file2]:
+            if not (file.endswith('.pdb') or file.endswith('.txt')):
+                print(f"Error: File {file} must end with .pdb or .txt.")
+                sys.exit(1)
+            if not os.path.isfile(file):
+                print(f"Error: File {file} does not exist.")
+                sys.exit(1)
+        file_list_1.append(file1)
+        file_list_2.append(file2)
 
 
-    print('The scaled score for the geometric descriptor is calculated.')
-    print(f'GeoScore {GeoScoreScaled:.2f}')
+    GeoScoreScaled, ZMScoreScaled=ZMPY3D_CP_CLI_BatchShapeScore(file_list_1,file_list_2,GridWidth)
 
-    print('The scaled score for the Zernike moments is calculated.')
-    print(f'TotalZMScore {ZMScoreScaled:.2f}')
+    # print('Left, the scaled score for the geometric descriptor.')
+    # print('Right, the scaled score for the Zernike moments.')
+    for geo_score, zm_score in zip(GeoScoreScaled, ZMScoreScaled):
+        print(f'GeoScore {geo_score:.2f} TotalZMScore {zm_score:.2f}')
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
