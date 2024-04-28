@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='ZMPY_CP',
-    version='0.0.1',
+    name='ZMPY3D_CP',
+    version='0.0.2',
     author='Jhih Siang (Sean) Lai',
     author_email='js.lai@uqconnect.edu.au, jsl035@ucsd.edu',
-    description='ZMPY CuPy version',
+    description='ZMPY3D CuPy version',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/tawssie/ZMPY_CP',
+    url='https://github.com/tawssie/ZMPY3D_CP',
     packages=find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',
@@ -19,12 +19,12 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'ZMPY_CP_CLI_ZM=ZMPY_CP.ZMPY_CP_CLI_ZM:main',
-            'ZMPY_CP_CLI_SuperA2B=ZMPY_CP.ZMPY_CP_CLI_SuperA2B:main',
-            'ZMPY_CP_CLI_ShapeScore=ZMPY_CP.ZMPY_CP_CLI_ShapeScore:main',
-            'ZMPY_CP_CLI_BatchSuperA2B=ZMPY_CP.ZMPY_CP_CLI_BatchSuperA2B:main',
-            'ZMPY_CP_CLI_BatchShapeScore=ZMPY_CP.ZMPY_CP_CLI_BatchShapeScore:main',
-            'ZMPY_CP_CLI_BatchZM=ZMPY_CP.ZMPY_CP_CLI_BatchZM:main',
+            'ZMPY3D_CP_CLI_ZM=ZMPY3D_CP.ZMPY3D_CP_CLI_ZM:main',
+            'ZMPY3D_CP_CLI_SuperA2B=ZMPY3D_CP.ZMPY3D_CP_CLI_SuperA2B:main',
+            'ZMPY3D_CP_CLI_ShapeScore=ZMPY3D_CP.ZMPY3D_CP_CLI_ShapeScore:main',
+            'ZMPY3D_CP_CLI_BatchSuperA2B=ZMPY3D_CP.ZMPY3D_CP_CLI_BatchSuperA2B:main',
+            'ZMPY3D_CP_CLI_BatchShapeScore=ZMPY3D_CP.ZMPY3D_CP_CLI_BatchShapeScore:main',
+            'ZMPY3D_CP_CLI_BatchZM=ZMPY3D_CP.ZMPY3D_CP_CLI_BatchZM:main',
         ],
     },
 
